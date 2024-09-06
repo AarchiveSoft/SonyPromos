@@ -25,65 +25,79 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-conn = sqlite3.connect('sonyPromos.db')
-c = conn.cursor()
-
-c.execute('''
-    CREATE TABLE IF NOT EXISTS promos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL ,
-        promo_title TEXT,
-        promo_details TEXT,
-        model TEXT,
-        art_nr TEXT,
-        start_date DATE,
-        end_date DATE,
-        scrape_date DATE,
-        product_link TEXT,
-        promo_link TEXT
-    )
-''')
-
 
 def main():
     """
     Main Method
 
-    This method is the entry point of the program. It calls the `createDatabase()` method from `dataBase` module to create a database. Then, it calls the `scrape_info()` method to scrape information.
+    This method serves as the entry point of the program. It creates an object of the DataBase class, initializes the database, scrapes information using the database object, and prints the results.
 
     :return: None
     """
-    DataBase.createDatabase()
-    scrape_info()
-    DataBase.print_results()
+    db = DataBase()  # Create an object of the DataBase class
+    db.create_database()
+    scrape_info(db)  # Passes the object of DataBase into function
+    db.print_results()
 
 
-class DataBase(c):
+class DataBase:
     """
-    Print the results of the promos table.
+    :class: DataBase
 
-    :return: None
+    This class represents a database that stores promotional information about Sony products.
+
+    Attributes:
+        conn (:obj:`sqlite3.Connection`): The connection object to the database.
+        c (:obj:`sqlite3.Cursor`): The cursor object to execute SQL statements.
+
+    Methods:
+        **__init__**()
+            Initializes the database connection.
+
+        **create_database**()
+            Creates the 'promos' table if it does not already exist.
+
+        **print_results**()
+            Prints all rows in the 'promos' table.
+
+    Usage:
+        Instantiate the DataBase class to create a connection to the database. Call the `create_database` method to create the 'promos' table. Call the `print_results` method to print the rows in the 'promos' table.
     """
 
-    def print_results(c):
-        """
-        Print the results of the promos table.
+    def __init__(self):
+        self.conn = sqlite3.connect('sonyPromos.db')
+        self.c = self.conn.cursor()
 
-        :return: None
-        """
+    def create_database(self):
+        self.c.execute('''
+                CREATE TABLE IF NOT EXISTS promos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    promo_title TEXT,
+                    promo_details TEXT,
+                    model TEXT,
+                    art_nr TEXT,
+                    start_date DATE,
+                    end_date DATE,
+                    scrape_date DATE,
+                    product_link TEXT,
+                    promo_link TEXT
+                )
+            ''')
+
+    def print_results(self):
         print("Results:")
-        c.execute('SELECT * FROM promos')
-        rows = c.fetchall()
+        self.c.execute('SELECT * FROM promos')
+        rows = self.c.fetchall()
         for row in rows:
             print(row)
 
 
-def scrape_info():
+def scrape_info(db):
     """
     This method scrapes information from a website and stores it in a database.
 
     :return: None
     """
-    createDatabase()
 
     if getattr(sys, "frozen", False):
         # Running as packaged executable, driver is in same directory
@@ -157,19 +171,21 @@ def scrape_info():
                 print(f"error: {e}")
                 continue
 
-        for key, list_values in title_and_contents.items():
+            for key, list_values in title_and_contents.items():
+                db.c.execute('''
+                    INSERT INTO promos (promo_title, promo_details, promo_link, scrape_date)
+                    VALUES (?, ?, ?, ?)
+                ''', (key, promo_description_string, category_link, datetime.date.today()))
 
-            c.execute('''
-                INSERT INTO promos (promo_title, promo_details, promo_link, scrape_date)
-                VALUES (?, ?, ?, ?)
-            ''', (key, promo_description_string, category_link, datetime.date.today()))
-            conn.commit()
+                for value in list_values:
+                    db.c.execute('''
+                        INSERT INTO promos (model)
+                        VALUES (?)
+                    ''', (value,))
+            db.conn.commit()
 
-            for value in list_values:
-                c.execute('''
-                    INSERT INTO promos (model)
-                    VALUES (?)
-                ''', value)
-                conn.commit()
+        driver.quit()
 
-    driver.quit()
+
+if __name__ == "__main__":
+    main()
