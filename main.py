@@ -19,7 +19,7 @@ import sqlite3
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome import webdriver
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -107,7 +107,7 @@ def scrape_info(db):
         base_path = os.path.dirname(os.path.abspath(__file__))
         base_path = os.path.dirname(base_path)
     chromedriver_path = os.path.join(base_path, 'chromedriver.exe')
-    chrome_options = webdriver.ChromeOptions()
+    chrome_options = ChromeOptions()
     chrome_options.binary_location = os.path.join(base_path, 'chrome', 'win64-118.0.5993.70', 'chrome-win64',
                                                   'chrome.exe')
 
